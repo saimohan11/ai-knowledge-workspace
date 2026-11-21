@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["ai_workspace"]
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  name        String
+  storagePath String   @unique
+  mimeType    String
+  size        Int
+  status      String   @default("UPLOADED")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  conversations Conversation[]
+  chunks DocumentChunk[] 
+
+  @@schema("ai_workspace")
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  title     String   @default("New conversation")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  messages Message[]
+
+  @@schema("ai_workspace")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  role      String
+  content   String   @db.Text
+  sources   Json?
+  createdAt DateTime @default(now())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@schema("ai_workspace")
+}
+
+model DocumentChunk {
+  id         String   @id @default(cuid())
+  content    String   @db.Text
+  chunkIndex Int
+  documentId String
+  createdAt  DateTime @default(now())
+  embedding Unsupported("vector(3072)")?
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+  @@schema("ai_workspace")
+}
